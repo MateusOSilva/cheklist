@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cronograma de Implantação de Portaria Remota</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -68,23 +67,6 @@
         textarea {
             resize: vertical;
         }
-        /* Estilos para impressão (PDF) */
-        @media print {
-            body {
-                background-color: #ffffff;
-            }
-            .no-print {
-                display: none !important;
-            }
-            .section-card, .card-print {
-                box-shadow: none !important;
-                border: 1px solid #e5e7eb !important;
-            }
-            .container {
-                max-width: 100% !important;
-                padding: 0 !important;
-            }
-        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -122,7 +104,7 @@
         <header class="text-center mb-10">
             <!-- Banner Inserido Aqui -->
             <div class="mb-8">
-                <img src="https://raw.githubusercontent.com/MateusOSilva/cheklist/main/MC3%20LOGO.jpg" alt="Logo Grupo MC3" class="w-full max-w-lg mx-auto">
+                <img id="logo-img" src="https://raw.githubusercontent.com/MateusOSilva/cheklist/main/MC3%20LOGO.jpg" alt="Logo Grupo MC3" class="w-full max-w-lg mx-auto" crossorigin="anonymous">
             </div>
 
             <!-- Títulos -->
@@ -133,7 +115,7 @@
         </header>
 
         <!-- Link de Colaboração -->
-        <div class="no-print mb-8 p-4 bg-white border border-gray-200 rounded-lg shadow-sm card-print">
+        <div class="no-print mb-8 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
             <h3 class="font-bold text-gray-800">Link de Partilha (Importante)</h3>
             <p class="text-sm text-gray-600 mt-1">Para colaborar em tempo real, **é obrigatório** partilhar o link completo abaixo.</p>
             <div class="mt-3 flex items-center">
@@ -143,7 +125,7 @@
         </div>
 
         <!-- Barra de Progresso -->
-        <div class="mb-10 p-4 bg-white border border-gray-200 rounded-lg shadow-sm card-print">
+        <div class="mb-10 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
             <div class="flex justify-between items-center mb-1">
                 <span class="text-base font-medium text-blue-700">Progresso Geral</span>
                 <span class="text-sm font-medium text-blue-700" id="progress-percentage">0%</span>
@@ -200,7 +182,6 @@
         const condominiumNameElement = document.getElementById('condominium-name');
         const pdfButton = document.getElementById('generate-pdf-button');
         
-        // Elementos do Modal de Senha
         const passwordModal = document.getElementById('password-modal');
         const passwordInput = document.getElementById('password-input');
         const passwordError = document.getElementById('password-error');
@@ -387,7 +368,7 @@
                     <h2 class="text-2xl font-bold mb-6 text-gray-800">${section.title}</h2>
                     <div id="task-list-${sectionIndex}">${tasksHtml}</div>
                     
-                    <div class="mt-6 flex gap-3 border-t pt-6">
+                    <div class="no-print mt-6 flex gap-3 border-t pt-6">
                         <input type="text" id="new-task-input-${sectionIndex}" class="flex-grow block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2" placeholder="Adicionar novo passo...">
                         <button onclick="window.addTask(${sectionIndex})" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Adicionar</button>
                     </div>
@@ -495,13 +476,16 @@
             
             const shareLinkDisplay = document.getElementById('share-link-display');
             const copyLinkButton = document.getElementById('copy-link-button');
-            shareLinkDisplay.value = window.location.href;
-            copyLinkButton.addEventListener('click', () => {
-                shareLinkDisplay.select();
-                document.execCommand('copy');
-                copyLinkButton.textContent = 'Copiado!';
-                setTimeout(() => { copyLinkButton.textContent = 'Copiar'; }, 2000);
-            });
+            if(shareLinkDisplay) {
+                shareLinkDisplay.value = window.location.href;
+                copyLinkButton.addEventListener('click', () => {
+                    shareLinkDisplay.select();
+                    document.execCommand('copy');
+                    copyLinkButton.textContent = 'Copiado!';
+                    setTimeout(() => { copyLinkButton.textContent = 'Copiar'; }, 2000);
+                });
+            }
+
 
             checklistDocRef = doc(db, "checklists", checklistId);
             
@@ -556,45 +540,100 @@
                 window.location.href = window.location.origin + window.location.pathname;
             });
 
-            pdfButton.addEventListener('click', () => {
+            pdfButton.addEventListener('click', async () => {
                 const originalButtonText = pdfButton.innerHTML;
                 pdfButton.innerHTML = 'A gerar PDF...';
                 pdfButton.disabled = true;
 
-                const content = document.getElementById('page-content');
-                
-                html2canvas(content, {
-                    scale: 2, // Aumenta a resolução da imagem
-                    useCORS: true,
-                    onclone: (document) => {
-                        // Garante que o texto dentro dos textareas seja visível no PDF
-                        const textareas = document.querySelectorAll('textarea');
-                        textareas.forEach(textarea => {
-                            const p = document.createElement('p');
-                            p.className = 'text-sm text-gray-700 whitespace-pre-wrap p-2 border border-gray-200 rounded-md bg-gray-50';
-                            p.textContent = textarea.value;
-                            textarea.parentNode.replaceChild(p, textarea);
-                        });
-                        const dateInputs = document.querySelectorAll('input[type="date"]');
-                        dateInputs.forEach(input => {
-                             const p = document.createElement('p');
-                             p.className = 'text-sm text-gray-700 p-2 border border-gray-200 rounded-md';
-                             p.textContent = input.value ? new Date(input.value + 'T00:00:00').toLocaleDateString('pt-BR') : 'Nenhuma data definida';
-                             input.parentNode.replaceChild(p, input);
-                        });
-                    }
-                }).then(canvas => {
-                    const imgData = canvas.toDataURL('image/png');
-                    const pdf = new jsPDF('p', 'mm', 'a4');
-                    const pdfWidth = pdf.internal.pageSize.getWidth();
-                    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                    
-                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-                    pdf.save(`Cronograma - ${projectData.condominiumName}.pdf`);
-
-                    pdfButton.innerHTML = originalButtonText;
-                    pdfButton.disabled = false;
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: 'p',
+                    unit: 'mm',
+                    format: 'a4'
                 });
+
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfMargin = 15;
+                const contentWidth = pdfWidth - (pdfMargin * 2);
+                let currentY = pdfMargin;
+
+                const checkPageBreak = (elementHeight) => {
+                    if (currentY + elementHeight > pdf.internal.pageSize.getHeight() - pdfMargin) {
+                        pdf.addPage();
+                        currentY = pdfMargin;
+                    }
+                };
+                
+                const logoImg = document.getElementById('logo-img');
+                const logoRatio = logoImg.naturalWidth / logoImg.naturalHeight;
+                const logoWidth = 80;
+                const logoHeight = logoWidth / logoRatio;
+                const logoX = (pdfWidth - logoWidth) / 2;
+                pdf.addImage(logoImg, 'JPEG', logoX, currentY, logoWidth, logoHeight);
+                currentY += logoHeight + 10;
+
+                pdf.setFont('Helvetica', 'bold');
+                pdf.setFontSize(20);
+                pdf.text("Cronograma de Implantação", pdfWidth / 2, currentY, { align: 'center' });
+                currentY += 10;
+                
+                pdf.setFont('Helvetica', 'normal');
+                pdf.setFontSize(16);
+                pdf.setTextColor(44, 82, 130);
+                pdf.text(projectData.condominiumName, pdfWidth / 2, currentY, { align: 'center' });
+                currentY += 15;
+                pdf.setTextColor(0, 0, 0);
+
+                projectData.checklist.forEach(section => {
+                    checkPageBreak(20);
+                    pdf.setFont('Helvetica', 'bold');
+                    pdf.setFontSize(14);
+                    pdf.text(section.title, pdfMargin, currentY);
+                    currentY += 8;
+
+                    pdf.setFont('Helvetica', 'normal');
+                    pdf.setFontSize(10);
+                    section.tasks.forEach(task => {
+                        if (task.type === 'header') {
+                            checkPageBreak(8);
+                            pdf.setFont('Helvetica', 'bold');
+                            pdf.text(task.text, pdfMargin + 5, currentY);
+                            currentY += 7;
+                            pdf.setFont('Helvetica', 'normal');
+                        } else {
+                            const symbol = task.checked ? '[X]' : '[ ]';
+                            const lines = pdf.splitTextToSize(`${symbol} ${task.text}`, contentWidth - 5);
+                            checkPageBreak(lines.length * 5);
+                            pdf.text(lines, pdfMargin + 5, currentY);
+                            currentY += (lines.length * 5);
+                        }
+                    });
+
+                    if (section.observations) {
+                        checkPageBreak(12);
+                        pdf.setFont('Helvetica', 'bold');
+                        pdf.text("Observações:", pdfMargin, currentY);
+                        currentY += 5;
+                        pdf.setFont('Helvetica', 'normal');
+                        const obsLines = pdf.splitTextToSize(section.observations, contentWidth);
+                        checkPageBreak(obsLines.length * 5);
+                        pdf.text(obsLines, pdfMargin, currentY);
+                        currentY += (obsLines.length * 5) + 5;
+                    }
+
+                    checkPageBreak(12);
+                    pdf.setFont('Helvetica', 'bold');
+                    pdf.text("Data de Conclusão:", pdfMargin, currentY);
+                    pdf.setFont('Helvetica', 'normal');
+                    const dateText = section.completionDate ? new Date(section.completionDate + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não definida';
+                    pdf.text(dateText, pdfMargin + 40, currentY);
+                    currentY += 15;
+                });
+
+                pdf.save(`Cronograma - ${projectData.condominiumName}.pdf`);
+
+                pdfButton.innerHTML = originalButtonText;
+                pdfButton.disabled = false;
             });
         }
 
