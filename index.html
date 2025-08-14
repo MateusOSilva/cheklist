@@ -43,13 +43,13 @@
             border-bottom: 1px solid #e5e7eb;
             padding-bottom: 0.5rem;
         }
-        #loading-overlay {
+        #loading-overlay, #password-modal {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(243, 244, 246, 0.9);
+            background-color: rgba(17, 24, 39, 0.6);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -66,13 +66,31 @@
     <!-- Tela de Carregamento -->
     <div id="loading-overlay">
         <div class="text-center">
-            <svg class="animate-spin h-8 w-8 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <svg class="animate-spin h-8 w-8 text-white mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <p class="mt-2 text-lg font-medium text-gray-700">A carregar o seu cronograma...</p>
+            <p class="mt-2 text-lg font-medium text-white">A carregar o seu cronograma...</p>
         </div>
     </div>
+    
+    <!-- Modal de Senha -->
+    <div id="password-modal" class="hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4">
+            <h3 class="text-lg font-bold mb-4 text-gray-900">Confirmar Exclusão</h3>
+            <p class="text-sm text-gray-600 mb-4">Para limpar este cronograma, por favor, digite a senha de confirmação.</p>
+            <div>
+                <label for="password-input" class="block text-sm font-medium text-gray-700">Senha</label>
+                <input type="password" id="password-input" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                <p id="password-error" class="text-red-500 text-xs mt-1 hidden">Senha incorreta.</p>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button id="cancel-reset-button" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-sm font-medium">Cancelar</button>
+                <button id="confirm-reset-button" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium">Confirmar Exclusão</button>
+            </div>
+        </div>
+    </div>
+
 
     <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-5xl">
         <header class="text-center mb-10">
@@ -98,7 +116,7 @@
             </div>
         </div>
 
-        <!-- Barra de Progresso e Reset -->
+        <!-- Barra de Progresso -->
         <div class="mb-10 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
             <div class="flex justify-between items-center mb-1">
                 <span class="text-base font-medium text-blue-700">Progresso Geral</span>
@@ -112,8 +130,9 @@
         <main id="checklist-container" class="space-y-8">
         </main>
 
-        <footer class="text-center mt-12">
-             <button id="reset-button" class="text-sm text-gray-500 hover:text-red-600 font-medium">Resetar Checklist para Todos</button>
+        <footer class="text-center mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
+             <button id="new-checklist-button" class="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Novo Cronograma</button>
+             <button id="reset-button" class="text-sm text-gray-500 hover:text-red-600 font-medium">Limpar Cronograma Atual</button>
         </footer>
     </div>
 
@@ -141,9 +160,17 @@
         const progressBar = document.getElementById('progress-bar');
         const progressPercentage = document.getElementById('progress-percentage');
         const resetButton = document.getElementById('reset-button');
+        const newChecklistButton = document.getElementById('new-checklist-button');
         const shareLinkDisplay = document.getElementById('share-link-display');
         const copyLinkButton = document.getElementById('copy-link-button');
         const condominiumNameElement = document.getElementById('condominium-name');
+        
+        // Elementos do Modal de Senha
+        const passwordModal = document.getElementById('password-modal');
+        const passwordInput = document.getElementById('password-input');
+        const passwordError = document.getElementById('password-error');
+        const cancelResetButton = document.getElementById('cancel-reset-button');
+        const confirmResetButton = document.getElementById('confirm-reset-button');
 
         let db, auth;
         let projectData = {
@@ -317,6 +344,12 @@
                 sectionElement.innerHTML = `
                     <h2 class="text-2xl font-bold mb-6 text-gray-800">${section.title}</h2>
                     <div id="task-list-${sectionIndex}">${tasksHtml}</div>
+                    
+                    <div class="mt-6 flex gap-3 border-t pt-6">
+                        <input type="text" id="new-task-input-${sectionIndex}" class="flex-grow block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2" placeholder="Adicionar novo passo...">
+                        <button onclick="window.addTask(${sectionIndex})" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Adicionar</button>
+                    </div>
+
                     <div class="mt-8 border-t pt-6">
                         <label for="obs-${sectionIndex}" class="block text-sm font-medium text-gray-700">Observações</label>
                         <textarea id="obs-${sectionIndex}" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" onblur="window.updateObservation(${sectionIndex}, this.value)">${section.observations || ''}</textarea>
@@ -346,7 +379,13 @@
         }
 
         window.addTask = function(sectionIndex) {
-            // A funcionalidade de adicionar tarefas foi removida para manter o layout limpo, mas pode ser reativada se necessário.
+            const input = document.getElementById(`new-task-input-${sectionIndex}`);
+            const taskText = input.value.trim();
+            if (taskText) {
+                projectData.checklist[sectionIndex].tasks.push({ type: 'task', text: taskText, checked: false });
+                saveStateToFirestore();
+                input.value = ''; // Limpa o campo após adicionar
+            }
         }
 
         window.updateTaskText = function(sectionIndex, taskIndex, newText) {
@@ -427,12 +466,29 @@
                 }
             });
 
-            resetButton.addEventListener('click', async () => {
-                if (confirm("Tem a certeza que deseja apagar todo o progresso para todos os utilizadores? Esta ação não pode ser desfeita.")) {
+            resetButton.addEventListener('click', () => {
+                passwordInput.value = '';
+                passwordError.classList.add('hidden');
+                passwordModal.classList.remove('hidden');
+            });
+
+            cancelResetButton.addEventListener('click', () => {
+                passwordModal.classList.add('hidden');
+            });
+
+            confirmResetButton.addEventListener('click', async () => {
+                if (passwordInput.value === 'mc3') {
+                    passwordModal.classList.add('hidden');
                     if (unsubscribe) unsubscribe();
                     await deleteDoc(checklistDocRef);
                     window.location.reload();
+                } else {
+                    passwordError.classList.remove('hidden');
                 }
+            });
+            
+            newChecklistButton.addEventListener('click', () => {
+                window.location.href = window.location.origin + window.location.pathname;
             });
 
             copyLinkButton.addEventListener('click', () => {
@@ -447,3 +503,4 @@
     </script>
 </body>
 </html>
+
