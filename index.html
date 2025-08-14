@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cronograma de Implantação de Portaria Remota (Colaborativo)</title>
+    <title>Cronograma de Implantação de Portaria Remota</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
         }
         .task-item input:checked + span {
             text-decoration: line-through;
@@ -18,23 +19,29 @@
             cursor: text;
             padding: 4px 8px;
             border-radius: 6px;
+            transition: background-color 0.2s;
         }
         .editable-field:hover {
             background-color: #f9fafb;
         }
         .editable-field:focus {
             outline: none;
-            background-color: #e0e7ff;
-            box-shadow: 0 0 0 2px #c7d2fe;
+            background-color: #eef2ff;
+            box-shadow: 0 0 0 2px #a5b4fc;
         }
         .section-card {
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
             transition: all 0.3s ease-in-out;
         }
         .task-header {
             font-weight: 600;
             color: #4b5563;
-            margin-top: 1rem;
-            margin-bottom: 0.5rem;
+            margin-top: 1.25rem;
+            margin-bottom: 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 0.5rem;
         }
         #loading-overlay {
             position: fixed;
@@ -42,16 +49,19 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(255, 255, 255, 0.8);
+            background-color: rgba(243, 244, 246, 0.9);
             display: flex;
             justify-content: center;
             align-items: center;
             z-index: 9999;
             transition: opacity 0.3s;
         }
+        textarea {
+            resize: vertical;
+        }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="text-gray-800">
 
     <!-- Tela de Carregamento -->
     <div id="loading-overlay">
@@ -60,44 +70,51 @@
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <p class="mt-2 text-lg font-medium text-gray-700">Conectando ao checklist colaborativo...</p>
+            <p class="mt-2 text-lg font-medium text-gray-700">A carregar o seu cronograma...</p>
         </div>
     </div>
 
-    <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-4xl">
-        <header class="text-center mb-8">
-            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">Cronograma de Implantação de Portaria Remota</h1>
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-5xl">
+        <header class="text-center mb-10">
+            <div class="flex justify-center items-center gap-4 mb-4">
+                 <!-- Substitua este SVG pela tag <img> do seu logo -->
+                <svg class="h-12 w-12 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" />
+                </svg>
+                <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">Cronograma de Implantação</h1>
+            </div>
             <h2 id="condominium-name" contenteditable="true" class="editable-field text-xl sm:text-2xl font-semibold text-blue-700 mt-2 mb-6 text-center">
                 Carregando...
             </h2>
         </header>
 
         <!-- Link de Colaboração -->
-        <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
-            <h3 class="font-bold text-blue-800">Link de Compartilhamento</h3>
-            <p class="text-sm text-blue-700">Para colaborar, copie e envie o link completo desta página (com o #ID no final) para seus colegas.</p>
-            <div class="mt-2 flex items-center">
-                <input id="share-link-display" readonly class="p-2 bg-gray-100 rounded-l text-gray-800 font-mono text-xs break-all w-full">
-                <button id="copy-link-button" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-r hover:bg-blue-700">Copiar</button>
+        <div class="mb-8 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+            <h3 class="font-bold text-gray-800">Link de Partilha</h3>
+            <p class="text-sm text-gray-600 mt-1">Para colaborar, copie e envie o link completo desta página (com o #ID no final) para os seus colegas.</p>
+            <div class="mt-3 flex items-center">
+                <input id="share-link-display" readonly class="p-2 bg-gray-100 rounded-l-md text-gray-800 font-mono text-xs break-all w-full border border-gray-300 focus:ring-0 focus:border-gray-300">
+                <button id="copy-link-button" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-r-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Copiar</button>
             </div>
         </div>
 
         <!-- Barra de Progresso e Reset -->
-        <div class="mb-8">
+        <div class="mb-10 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
             <div class="flex justify-between items-center mb-1">
                 <span class="text-base font-medium text-blue-700">Progresso Geral</span>
                 <span class="text-sm font-medium text-blue-700" id="progress-percentage">0%</span>
             </div>
-            <div class="w-full bg-gray-200 rounded-full h-4 mb-4">
-                <div id="progress-bar" class="bg-blue-600 h-4 rounded-full" style="width: 0%; transition: width 0.5s ease-in-out;"></div>
-            </div>
-            <div class="text-right">
-                <button id="reset-button" class="text-sm text-red-600 hover:text-red-800 font-medium">Resetar Checklist para Todos</button>
+            <div class="w-full bg-gray-200 rounded-full h-4">
+                <div id="progress-bar" class="bg-blue-600 h-4 rounded-full transition-all duration-500"></div>
             </div>
         </div>
 
-        <main id="checklist-container" class="space-y-6">
+        <main id="checklist-container" class="space-y-8">
         </main>
+
+        <footer class="text-center mt-12">
+             <button id="reset-button" class="text-sm text-gray-500 hover:text-red-600 font-medium">Resetar Checklist para Todos</button>
+        </footer>
     </div>
 
     <script type="module">
@@ -119,7 +136,6 @@
         };
         // ===================================================================================
 
-        // --- Variáveis Globais e Configuração ---
         const loadingOverlay = document.getElementById('loading-overlay');
         const container = document.getElementById('checklist-container');
         const progressBar = document.getElementById('progress-bar');
@@ -139,9 +155,22 @@
 
         const defaultChecklist = [
             {
-                title: "Fase 1 – Avaliação Técnica e Planejamento",
+                title: "Fase 1 – Planeamento Inicial",
+                observations: "",
+                completionDate: "",
                 tasks: [
-                    { type: 'header', text: 'Visita Técnica Inicial e Análise de Infraestrutura' },
+                    { type: 'header', text: 'Alinhamento Estratégico' },
+                    { type: 'task', text: 'Reunião de Abertura com o Cliente.', checked: false },
+                    { type: 'task', text: 'Entendimento detalhado das necessidades e expectativas.', checked: false },
+                    { type: 'task', text: 'Apresentação da solução de portaria remota e cronograma.', checked: false },
+                ]
+            },
+            {
+                title: "Fase 2 – Avaliação Técnica e Proposta",
+                observations: "",
+                completionDate: "",
+                tasks: [
+                    { type: 'header', text: 'Vistoria Técnica de Infraestrutura' },
                     { type: 'task', text: 'Analisar infraestrutura de interfonia existente (analógica/digital).', checked: false },
                     { type: 'task', text: 'Verificar portões de pedestre (quantidade, tipo de abertura, fluxo).', checked: false },
                     { type: 'task', text: 'Verificar portões de veículo (quantidade, tipo de abertura, fluxo).', checked: false },
@@ -151,30 +180,34 @@
                     { type: 'task', text: 'Analisar pontos de energia e necessidade de nobreaks/baterias.', checked: false },
                     { type: 'task', text: 'Mapear e fotografar todos os pontos de acesso e locais de instalação.', checked: false },
                     { type: 'header', text: 'Definição do Escopo e Proposta' },
-                    { type: 'task', text: 'Definir tipos e quantidade de equipamentos (leitores, câmeras, controladoras, etc.).', checked: false },
+                    { type: 'task', text: 'Definir tipos e quantidade de equipamentos (leitores, câmaras, controladoras, etc.).', checked: false },
                     { type: 'task', text: 'Elaborar o relatório técnico da vistoria.', checked: false },
                     { type: 'task', text: 'Desenhar o layout de instalação (croqui).', checked: false },
                     { type: 'task', text: 'Elaborar orçamento e proposta comercial detalhada.', checked: false },
                 ]
             },
             {
-                title: "Fase 2 – Proposta e Aquisição de Materiais",
+                title: "Fase 3 – Aprovação e Aquisição",
+                observations: "",
+                completionDate: "",
                 tasks: [
                     { type: 'header', text: 'Aprovação Comercial' },
                     { type: 'task', text: 'Apresentar proposta e orçamento ao cliente.', checked: false },
                     { type: 'task', text: 'Aprovação da proposta e assinatura do contrato com o cliente.', checked: false },
                     { type: 'header', text: 'Aquisição de Materiais e Logística' },
-                    { type: 'task', text: 'Orçamento e compra de equipamentos principais (controladoras, câmeras, leitores, etc.).', checked: false },
+                    { type: 'task', text: 'Orçamento e compra de equipamentos principais (controladoras, câmaras, leitores, etc.).', checked: false },
                     { type: 'task', text: 'Compra de cabeamento estruturado, conectores, canaletas e outros insumos.', checked: false },
                     { type: 'task', text: 'Conferência e armazenamento seguro dos materiais recebidos.', checked: false },
                     { type: 'task', text: 'Separar materiais por kit de instalação (setores ou áreas).', checked: false },
                 ]
             },
             {
-                title: "Fase 3 – Infraestrutura Física",
+                title: "Fase 4 – Infraestrutura Física",
+                observations: "",
+                completionDate: "",
                 tasks: [
                     { type: 'header', text: 'Rede' },
-                    { type: 'task', text: 'Passagem de cabos de rede (CAT6 ou superior) para pontos de câmeras, leitores e interfones.', checked: false },
+                    { type: 'task', text: 'Passagem de cabos de rede (CAT6 ou superior) para pontos de câmaras, leitores e interfones.', checked: false },
                     { type: 'task', text: 'Instalação de switches PoE com redundância.', checked: false },
                     { type: 'task', text: 'Organização e identificação de cabos.', checked: false },
                     { type: 'header', text: 'Energia' },
@@ -182,42 +215,46 @@
                     { type: 'task', text: 'Nobreaks e baterias estacionárias (para manter funcionamento em queda de energia).', checked: false },
                     { type: 'task', text: 'Aterramento e proteção contra surtos.', checked: false },
                     { type: 'header', text: 'Fixações' },
-                    { type: 'task', text: 'Instalação de suportes para câmeras, totens para leitores, caixas de sobrepor/embutir.', checked: false }
+                    { type: 'task', text: 'Instalação de suportes para câmaras, totens para leitores, caixas de sobrepor/embutir.', checked: false }
                 ]
             },
             {
-                title: "Fase 4 – Instalação dos Equipamentos",
+                title: "Fase 5 – Instalação dos Equipamentos",
+                observations: "",
+                completionDate: "",
                 tasks: [
                     { type: 'header', text: 'Controle de acesso' },
                     { type: 'task', text: 'Instalação dos leitores faciais / RFID / biométricos.', checked: false },
                     { type: 'task', text: 'Ligação com fechaduras, eletroímãs, motores de portão.', checked: false },
                     { type: 'task', text: 'Teste individual de acionamento.', checked: false },
                     { type: 'header', text: 'CFTV' },
-                    { type: 'task', text: 'Fixação e alinhamento das câmeras.', checked: false },
+                    { type: 'task', text: 'Fixação e alinhamento das câmaras.', checked: false },
                     { type: 'task', text: 'Conexão na rede.', checked: false },
                     { type: 'task', text: 'Teste de imagem e gravação.', checked: false },
                     { type: 'header', text: 'Interfonia IP' },
                     { type: 'task', text: 'Instalação dos módulos de chamada.', checked: false },
                     { type: 'task', text: 'Integração com software de portaria remota.', checked: false },
-                    { type: 'header', text: 'Central de controle' },
+                    { type: 'header', text: 'Central de controlo' },
                     { type: 'task', text: 'Montagem do rack (switches, patch panels, DVR/NVR, roteadores).', checked: false },
                     { type: 'task', text: 'Organização dos cabos e identificação.', checked: false }
                 ]
             },
             {
-                title: "Fase 5 – Configuração e Integração do Sistema",
+                title: "Fase 6 – Configuração e Integração",
+                observations: "",
+                completionDate: "",
                 tasks: [
                     { type: 'header', text: 'Configuração de rede' },
                     { type: 'task', text: 'IP fixo para cada equipamento.', checked: false },
                     { type: 'task', text: 'VLANs e QoS para priorização de tráfego de vídeo e voz.', checked: false },
                     { type: 'task', text: 'Configuração de redundância de internet.', checked: false },
                     { type: 'header', text: 'Software' },
-                    { type: 'task', text: 'Cadastro de usuários (moradores, prestadores).', checked: false },
+                    { type: 'task', text: 'Cadastro de utilizadores (moradores, prestadores).', checked: false },
                     { type: 'task', text: 'Programação de horários e regras de acesso.', checked: false },
                     { type: 'task', text: 'Integração com sistema de portaria remota.', checked: false },
                     { type: 'header', text: 'CFTV' },
                     { type: 'task', text: 'Ajuste de ângulos e resolução.', checked: false },
-                    { type: 'task', text: 'Configuração de gravação contínua e detecção de movimento.', checked: false },
+                    { type: 'task', text: 'Configuração de gravação contínua e deteção de movimento.', checked: false },
                     { type: 'task', text: 'Criação de grupos e permissões de visualização.', checked: false },
                     { type: 'header', text: 'Testes' },
                     { type: 'task', text: 'Testes de abertura remota.', checked: false },
@@ -226,15 +263,17 @@
                 ]
             },
             {
-                title: "Fase 6 – Treinamento e Entrega",
+                title: "Fase 7 – Treinamento e Entrega",
+                observations: "",
+                completionDate: "",
                 tasks: [
                     { type: 'header', text: 'Treinamento' },
-                    { type: 'task', text: 'Síndico, zelador e equipe de segurança.', checked: false },
+                    { type: 'task', text: 'Síndico, zelador e equipa de segurança.', checked: false },
                     { type: 'task', text: 'Uso do sistema, relatórios, abertura de chamados.', checked: false },
                     { type: 'header', text: 'Documentação' },
                     { type: 'task', text: 'Manual do sistema.', checked: false },
                     { type: 'task', text: 'Lista de senhas e acessos administrativos.', checked: false },
-                    { type: 'task', text: 'Registro de configurações e IPs.', checked: false },
+                    { type: 'task', text: 'Registo de configurações e IPs.', checked: false },
                     { type: 'header', text: 'Entrega oficial' },
                     { type: 'task', text: 'Assinatura de termo de entrega e aceitação.', checked: false },
                     { type: 'task', text: 'Início do suporte pós-implantação.', checked: false }
@@ -245,11 +284,10 @@
         async function saveStateToFirestore() {
             if (!checklistDocRef) return;
             try {
-                // Agora salva o objeto de projeto inteiro
                 const dataToSave = { content: JSON.stringify(projectData) };
                 await setDoc(checklistDocRef, dataToSave);
             } catch (error) {
-                console.error("Erro ao salvar no Firestore: ", error);
+                console.error("Erro ao guardar no Firestore: ", error);
             }
         }
 
@@ -262,7 +300,7 @@
             container.innerHTML = '';
             projectData.checklist.forEach((section, sectionIndex) => {
                 const sectionElement = document.createElement('div');
-                sectionElement.className = 'section-card bg-white p-6 rounded-lg shadow-md';
+                sectionElement.className = 'section-card p-6';
                 let tasksHtml = '';
                 section.tasks.forEach((task, taskIndex) => {
                     if (task.type === 'header') {
@@ -275,25 +313,40 @@
                             </div>`;
                     }
                 });
+
                 sectionElement.innerHTML = `
-                    <h2 class="text-xl font-semibold mb-4 text-gray-800">${section.title}</h2>
+                    <h2 class="text-2xl font-bold mb-6 text-gray-800">${section.title}</h2>
                     <div id="task-list-${sectionIndex}">${tasksHtml}</div>
-                    <div class="mt-6 flex gap-3">
-                        <input type="text" id="new-task-input-${sectionIndex}" class="flex-grow block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2" placeholder="Adicionar novo passo...">
-                        <button onclick="window.addTask(${sectionIndex})" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">Adicionar</button>
-                    </div>`;
+                    <div class="mt-8 border-t pt-6">
+                        <label for="obs-${sectionIndex}" class="block text-sm font-medium text-gray-700">Observações</label>
+                        <textarea id="obs-${sectionIndex}" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" onblur="window.updateObservation(${sectionIndex}, this.value)">${section.observations || ''}</textarea>
+                    </div>
+                    <div class="mt-4">
+                        <label for="date-${sectionIndex}" class="block text-sm font-medium text-gray-700">Data de Conclusão</label>
+                        <input type="date" id="date-${sectionIndex}" value="${section.completionDate || ''}" class="mt-1 block w-full sm:w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" onchange="window.updateCompletionDate(${sectionIndex}, this.value)">
+                    </div>
+                `;
                 container.appendChild(sectionElement);
             });
             updateProgress();
         }
-
-        window.addTask = function(sectionIndex) {
-            const input = document.getElementById(`new-task-input-${sectionIndex}`);
-            const taskText = input.value.trim();
-            if (taskText) {
-                projectData.checklist[sectionIndex].tasks.push({ type: 'task', text: taskText, checked: false });
+        
+        window.updateObservation = function(sectionIndex, text) {
+            if (projectData.checklist[sectionIndex].observations !== text) {
+                projectData.checklist[sectionIndex].observations = text;
                 saveStateToFirestore();
             }
+        }
+
+        window.updateCompletionDate = function(sectionIndex, date) {
+             if (projectData.checklist[sectionIndex].completionDate !== date) {
+                projectData.checklist[sectionIndex].completionDate = date;
+                saveStateToFirestore();
+            }
+        }
+
+        window.addTask = function(sectionIndex) {
+            // A funcionalidade de adicionar tarefas foi removida para manter o layout limpo, mas pode ser reativada se necessário.
         }
 
         window.updateTaskText = function(sectionIndex, taskIndex, newText) {
@@ -324,7 +377,7 @@
 
         async function main() {
             if (!firebaseConfig.apiKey) {
-                loadingOverlay.innerHTML = `<p class="text-center text-red-600 font-semibold p-4">Erro: A configuração do Firebase não foi encontrada.<br>Edite o arquivo index.html e cole sua 'firebaseConfig'.</p>`;
+                loadingOverlay.innerHTML = `<p class="text-center text-red-600 font-semibold p-4">Erro: A configuração do Firebase não foi encontrada.<br>Edite o ficheiro index.html e cole a sua 'firebaseConfig'.</p>`;
                 return;
             }
 
@@ -354,7 +407,7 @@
                 if (docSnap.exists()) {
                     projectData = JSON.parse(docSnap.data().content);
                 } else {
-                    console.log("Documento não encontrado, criando um novo.");
+                    console.log("Documento não encontrado, a criar um novo.");
                     projectData.checklist = JSON.parse(JSON.stringify(defaultChecklist));
                     saveStateToFirestore();
                 }
@@ -375,7 +428,7 @@
             });
 
             resetButton.addEventListener('click', async () => {
-                if (confirm("Tem certeza que deseja apagar todo o progresso para todos os usuários? Esta ação não pode ser desfeita.")) {
+                if (confirm("Tem a certeza que deseja apagar todo o progresso para todos os utilizadores? Esta ação não pode ser desfeita.")) {
                     if (unsubscribe) unsubscribe();
                     await deleteDoc(checklistDocRef);
                     window.location.reload();
