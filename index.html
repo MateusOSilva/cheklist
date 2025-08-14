@@ -74,8 +74,8 @@
         </div>
     </div>
     
-    <!-- Modal de Senha -->
-    <div id="password-modal" class="hidden">
+    <!-- Modal de Senha (Começa escondido com style="display: none;") -->
+    <div id="password-modal" style="display: none;">
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4">
             <h3 class="text-lg font-bold mb-4 text-gray-900">Confirmar Exclusão</h3>
             <p class="text-sm text-gray-600 mb-4">Para apagar este cronograma, por favor, digite a senha de confirmação.</p>
@@ -452,7 +452,9 @@
                 }
                 renderAll();
                 loadingOverlay.style.opacity = '0';
-                setTimeout(() => loadingOverlay.style.display = 'none', 300);
+                setTimeout(() => { 
+                    if(loadingOverlay) loadingOverlay.style.display = 'none';
+                }, 300);
             }, (error) => {
                 console.error("Erro ao ouvir o documento do Firestore:", error);
                 loadingOverlay.innerHTML = "<p>Erro ao carregar o checklist.</p>";
@@ -469,16 +471,16 @@
             resetButton.addEventListener('click', () => {
                 passwordInput.value = '';
                 passwordError.classList.add('hidden');
-                passwordModal.classList.remove('hidden');
+                passwordModal.style.display = 'flex';
             });
 
             cancelResetButton.addEventListener('click', () => {
-                passwordModal.classList.add('hidden');
+                passwordModal.style.display = 'none';
             });
 
             confirmResetButton.addEventListener('click', async () => {
                 if (passwordInput.value === 'mc3') {
-                    passwordModal.classList.add('hidden');
+                    passwordModal.style.display = 'none';
                     if (unsubscribe) unsubscribe();
                     await deleteDoc(checklistDocRef);
                     window.location.reload();
@@ -502,4 +504,4 @@
         main();
     </script>
 </body>
-</ht
+</html>
