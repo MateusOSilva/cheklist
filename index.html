@@ -5,11 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cronograma de Implantação de Portaria Remota</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6;
+        }
+        .task-item:hover .delete-task-btn {
+            opacity: 1;
+        }
+        .delete-task-btn {
+            opacity: 0;
+            transition: opacity 0.2s;
         }
         .task-item input:checked + span {
             text-decoration: line-through;
@@ -59,6 +68,23 @@
         textarea {
             resize: vertical;
         }
+        /* Estilos para impressão (PDF) */
+        @media print {
+            body {
+                background-color: #ffffff;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .section-card, .card-print {
+                box-shadow: none !important;
+                border: 1px solid #e5e7eb !important;
+            }
+            .container {
+                max-width: 100% !important;
+                padding: 0 !important;
+            }
+        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -74,7 +100,7 @@
         </div>
     </div>
     
-    <!-- Modal de Senha (Começa escondido com style="display: none;") -->
+    <!-- Modal de Senha -->
     <div id="password-modal" style="display: none;">
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4">
             <h3 class="text-lg font-bold mb-4 text-gray-900">Confirmar Exclusão</h3>
@@ -92,7 +118,7 @@
     </div>
 
 
-    <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-5xl">
+    <div id="page-content" class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-5xl">
         <header class="text-center mb-10">
             <!-- Banner Inserido Aqui -->
             <div class="mb-8">
@@ -106,8 +132,8 @@
             </h2>
         </header>
 
-        <!-- Link de Colaboração (Reintroduzido) -->
-        <div class="mb-8 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+        <!-- Link de Colaboração -->
+        <div class="no-print mb-8 p-4 bg-white border border-gray-200 rounded-lg shadow-sm card-print">
             <h3 class="font-bold text-gray-800">Link de Partilha (Importante)</h3>
             <p class="text-sm text-gray-600 mt-1">Para colaborar em tempo real, **é obrigatório** partilhar o link completo abaixo.</p>
             <div class="mt-3 flex items-center">
@@ -117,7 +143,7 @@
         </div>
 
         <!-- Barra de Progresso -->
-        <div class="mb-10 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+        <div class="mb-10 p-4 bg-white border border-gray-200 rounded-lg shadow-sm card-print">
             <div class="flex justify-between items-center mb-1">
                 <span class="text-base font-medium text-blue-700">Progresso Geral</span>
                 <span class="text-sm font-medium text-blue-700" id="progress-percentage">0%</span>
@@ -125,18 +151,28 @@
             <div class="w-full bg-gray-200 rounded-full h-4">
                 <div id="progress-bar" class="bg-blue-600 h-4 rounded-full transition-all duration-500"></div>
             </div>
+             <!-- Botão Gerar PDF -->
+            <div class="mt-4 text-center">
+                <button id="generate-pdf-button" style="display: none;" class="no-print inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2H4zm6 10a.75.75 0 000-1.5H7.75a.75.75 0 000 1.5h2.5zm-2.25-2a.75.75 0 01.75-.75h4.5a.75.75 0 010 1.5h-4.5a.75.75 0 01-.75-.75zm0-2.5a.75.75 0 01.75-.75h4.5a.75.75 0 010 1.5h-4.5a.75.75 0 01-.75-.75z" clip-rule="evenodd" />
+                    </svg>
+                    Gerar Relatório PDF
+                </button>
+            </div>
         </div>
 
         <main id="checklist-container" class="space-y-8">
         </main>
 
-        <footer class="text-center mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
+        <footer class="no-print text-center mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
              <button id="new-checklist-button" class="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Criar Novo Cronograma</button>
              <button id="reset-button" class="text-sm text-gray-500 hover:text-red-600 font-medium">Apagar este Cronograma</button>
         </footer>
     </div>
 
     <script type="module">
+        const { jsPDF } = window.jspdf;
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -161,9 +197,8 @@
         const progressPercentage = document.getElementById('progress-percentage');
         const resetButton = document.getElementById('reset-button');
         const newChecklistButton = document.getElementById('new-checklist-button');
-        const shareLinkDisplay = document.getElementById('share-link-display');
-        const copyLinkButton = document.getElementById('copy-link-button');
         const condominiumNameElement = document.getElementById('condominium-name');
+        const pdfButton = document.getElementById('generate-pdf-button');
         
         // Elementos do Modal de Senha
         const passwordModal = document.getElementById('password-modal');
@@ -334,9 +369,16 @@
                         tasksHtml += `<div class="task-header">${task.text}</div>`;
                     } else {
                         tasksHtml += `
-                            <div class="task-item flex items-center mb-3">
-                                <input type="checkbox" id="task-${sectionIndex}-${taskIndex}" class="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0" onchange="window.toggleTask(${sectionIndex}, ${taskIndex})" ${task.checked ? 'checked' : ''}>
-                                <span class="ml-3 text-gray-700 w-full" contenteditable="true" onblur="window.updateTaskText(${sectionIndex}, ${taskIndex}, this.innerText)">${task.text}</span>
+                            <div class="task-item flex items-center justify-between mb-3 group">
+                                <div class="flex items-center flex-grow">
+                                    <input type="checkbox" id="task-${sectionIndex}-${taskIndex}" class="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0" onchange="window.toggleTask(${sectionIndex}, ${taskIndex})" ${task.checked ? 'checked' : ''}>
+                                    <span class="ml-3 text-gray-700 w-full" contenteditable="true" onblur="window.updateTaskText(${sectionIndex}, ${taskIndex}, this.innerText)">${task.text}</span>
+                                </div>
+                                <button onclick="window.deleteTask(${sectionIndex}, ${taskIndex})" class="delete-task-btn ml-4 text-gray-400 hover:text-red-500 flex-shrink-0">
+                                    <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
                             </div>`;
                     }
                 });
@@ -387,6 +429,13 @@
                 input.value = ''; // Limpa o campo após adicionar
             }
         }
+        
+        window.deleteTask = function(sectionIndex, taskIndex) {
+            if (confirm("Tem a certeza que deseja apagar esta tarefa?")) {
+                projectData.checklist[sectionIndex].tasks.splice(taskIndex, 1);
+                saveStateToFirestore();
+            }
+        }
 
         window.updateTaskText = function(sectionIndex, taskIndex, newText) {
             if (projectData.checklist[sectionIndex].tasks[taskIndex].text !== newText) {
@@ -408,6 +457,12 @@
             const percentage = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
             progressBar.style.width = `${percentage}%`;
             progressPercentage.textContent = `${percentage}%`;
+
+            if (percentage === 100) {
+                pdfButton.style.display = 'inline-flex';
+            } else {
+                pdfButton.style.display = 'none';
+            }
         }
 
         function generateId(length = 8) {
@@ -438,8 +493,16 @@
                 window.location.hash = checklistId;
             }
             
+            const shareLinkDisplay = document.getElementById('share-link-display');
+            const copyLinkButton = document.getElementById('copy-link-button');
             shareLinkDisplay.value = window.location.href;
-            
+            copyLinkButton.addEventListener('click', () => {
+                shareLinkDisplay.select();
+                document.execCommand('copy');
+                copyLinkButton.textContent = 'Copiado!';
+                setTimeout(() => { copyLinkButton.textContent = 'Copiar'; }, 2000);
+            });
+
             checklistDocRef = doc(db, "checklists", checklistId);
             
             unsubscribe = onSnapshot(checklistDocRef, (docSnap) => {
@@ -493,11 +556,45 @@
                 window.location.href = window.location.origin + window.location.pathname;
             });
 
-            copyLinkButton.addEventListener('click', () => {
-                shareLinkDisplay.select();
-                document.execCommand('copy');
-                copyLinkButton.textContent = 'Copiado!';
-                setTimeout(() => { copyLinkButton.textContent = 'Copiar'; }, 2000);
+            pdfButton.addEventListener('click', () => {
+                const originalButtonText = pdfButton.innerHTML;
+                pdfButton.innerHTML = 'A gerar PDF...';
+                pdfButton.disabled = true;
+
+                const content = document.getElementById('page-content');
+                
+                html2canvas(content, {
+                    scale: 2, // Aumenta a resolução da imagem
+                    useCORS: true,
+                    onclone: (document) => {
+                        // Garante que o texto dentro dos textareas seja visível no PDF
+                        const textareas = document.querySelectorAll('textarea');
+                        textareas.forEach(textarea => {
+                            const p = document.createElement('p');
+                            p.className = 'text-sm text-gray-700 whitespace-pre-wrap p-2 border border-gray-200 rounded-md bg-gray-50';
+                            p.textContent = textarea.value;
+                            textarea.parentNode.replaceChild(p, textarea);
+                        });
+                        const dateInputs = document.querySelectorAll('input[type="date"]');
+                        dateInputs.forEach(input => {
+                             const p = document.createElement('p');
+                             p.className = 'text-sm text-gray-700 p-2 border border-gray-200 rounded-md';
+                             p.textContent = input.value ? new Date(input.value + 'T00:00:00').toLocaleDateString('pt-BR') : 'Nenhuma data definida';
+                             input.parentNode.replaceChild(p, input);
+                        });
+                    }
+                }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                    
+                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                    pdf.save(`Cronograma - ${projectData.condominiumName}.pdf`);
+
+                    pdfButton.innerHTML = originalButtonText;
+                    pdfButton.disabled = false;
+                });
             });
         }
 
