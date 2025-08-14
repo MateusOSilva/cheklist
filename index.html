@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cronograma de Implantação de Portaria Remota (Colaborativo)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .task-item input:checked + span {
+            text-decoration: line-through;
+            color: #9ca3af;
+        }
+        .editable-field {
+            cursor: text;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        .editable-field:hover {
+            background-color: #f9fafb;
+        }
+        .editable-field:focus {
+            outline: none;
+            background-color: #e0e7ff;
+            box-shadow: 0 0 0 2px #c7d2fe;
+        }
+        .section-card {
+            transition: all 0.3s ease-in-out;
+        }
+        .task-header {
+            font-weight: 600;
+            color: #4b5563;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- Tela de Carregamento -->
+    <div id="loading-overlay">
+        <div class="text-center">
+            <svg class="animate-spin h-8 w-8 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="mt-2 text-lg font-medium text-gray-700">Conectando ao checklist colaborativo...</p>
+        </div>
+    </div>
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-4xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">Cronograma de Implantação de Portaria Remota</h1>
+            <h2 id="condominium-name" contenteditable="true" class="editable-field text-xl sm:text-2xl font-semibold text-blue-700 mt-2 mb-6 text-center">
+                Carregando...
+            </h2>
+        </header>
+
+        <!-- Link de Colaboração -->
+        <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+            <h3 class="font-bold text-blue-800">Link de Compartilhamento</h3>
+            <p class="text-sm text-blue-700">Para colaborar, copie e envie o link completo desta página (com o #ID no final) para seus colegas.</p>
+            <div class="mt-2 flex items-center">
+                <input id="share-link-display" readonly class="p-2 bg-gray-100 rounded-l text-gray-800 font-mono text-xs break-all w-full">
+                <button id="copy-link-button" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-r hover:bg-blue-700">Copiar</button>
+            </div>
+        </div>
+
+        <!-- Barra de Progresso e Reset -->
+        <div class="mb-8">
+            <div class="flex justify-between items-center mb-1">
+                <span class="text-base font-medium text-blue-700">Progresso Geral</span>
+                <span class="text-sm font-medium text-blue-700" id="progress-percentage">0%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-4 mb-4">
+                <div id="progress-bar" class="bg-blue-600 h-4 rounded-full" style="width: 0%; transition: width 0.5s ease-in-out;"></div>
+            </div>
+            <div class="text-right">
+                <button id="reset-button" class="text-sm text-red-600 hover:text-red-800 font-medium">Resetar Checklist para Todos</button>
+            </div>
+        </div>
+
+        <main id="checklist-container" class="space-y-6">
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ===================================================================================
+        // SUA CONFIGURAÇÃO DO FIREBASE ESTÁ AQUI
+        // ===================================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyDTYf3YwhZE5_2MweCUex3bCUs0RWh0GRw",
+            authDomain: "cronogramaremota.firebaseapp.com",
+            projectId: "cronogramaremota",
+            storageBucket: "cronogramaremota.firebasestorage.app",
+            messagingSenderId: "799352182116",
+            appId: "1:799352182116:web:83e474730e8685870e9671",
+            measurementId: "G-XB8JZ229JX"
+        };
+        // ===================================================================================
+
+        // --- Variáveis Globais e Configuração ---
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const container = document.getElementById('checklist-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressPercentage = document.getElementById('progress-percentage');
+        const resetButton = document.getElementById('reset-button');
+        const shareLinkDisplay = document.getElementById('share-link-display');
+        const copyLinkButton = document.getElementById('copy-link-button');
+        const condominiumNameElement = document.getElementById('condominium-name');
+
+        let db, auth;
+        let projectData = {
+            condominiumName: "Nome do Condomínio (Clique para editar)",
+            checklist: []
+        };
+        let checklistDocRef;
+        let unsubscribe;
+
+        const defaultChecklist = [
+            {
+                title: "Fase 1 – Avaliação Técnica e Planejamento",
+                tasks: [
+                    { type: 'header', text: 'Visita Técnica Inicial e Análise de Infraestrutura' },
+                    { type: 'task', text: 'Analisar infraestrutura de interfonia existente (analógica/digital).', checked: false },
+                    { type: 'task', text: 'Verificar portões de pedestre (quantidade, tipo de abertura, fluxo).', checked: false },
+                    { type: 'task', text: 'Verificar portões de veículo (quantidade, tipo de abertura, fluxo).', checked: false },
+                    { type: 'task', text: 'Analisar existência e funcionamento de clausura de pedestres e veículos.', checked: false },
+                    { type: 'task', text: 'Identificar necessidade de obras civis (alvenaria, serralheria).', checked: false },
+                    { type: 'task', text: 'Verificar qualidade do link de internet (velocidade, estabilidade) e se há link de backup.', checked: false },
+                    { type: 'task', text: 'Analisar pontos de energia e necessidade de nobreaks/baterias.', checked: false },
+                    { type: 'task', text: 'Mapear e fotografar todos os pontos de acesso e locais de instalação.', checked: false },
+                    { type: 'header', text: 'Definição do Escopo e Proposta' },
+                    { type: 'task', text: 'Definir tipos e quantidade de equipamentos (leitores, câmeras, controladoras, etc.).', checked: false },
+                    { type: 'task', text: 'Elaborar o relatório técnico da vistoria.', checked: false },
+                    { type: 'task', text: 'Desenhar o layout de instalação (croqui).', checked: false },
+                    { type: 'task', text: 'Elaborar orçamento e proposta comercial detalhada.', checked: false },
+                ]
+            },
+            {
+                title: "Fase 2 – Proposta e Aquisição de Materiais",
+                tasks: [
+                    { type: 'header', text: 'Aprovação Comercial' },
+                    { type: 'task', text: 'Apresentar proposta e orçamento ao cliente.', checked: false },
+                    { type: 'task', text: 'Aprovação da proposta e assinatura do contrato com o cliente.', checked: false },
+                    { type: 'header', text: 'Aquisição de Materiais e Logística' },
+                    { type: 'task', text: 'Orçamento e compra de equipamentos principais (controladoras, câmeras, leitores, etc.).', checked: false },
+                    { type: 'task', text: 'Compra de cabeamento estruturado, conectores, canaletas e outros insumos.', checked: false },
+                    { type: 'task', text: 'Conferência e armazenamento seguro dos materiais recebidos.', checked: false },
+                    { type: 'task', text: 'Separar materiais por kit de instalação (setores ou áreas).', checked: false },
+                ]
+            },
+            {
+                title: "Fase 3 – Infraestrutura Física",
+                tasks: [
+                    { type: 'header', text: 'Rede' },
+                    { type: 'task', text: 'Passagem de cabos de rede (CAT6 ou superior) para pontos de câmeras, leitores e interfones.', checked: false },
+                    { type: 'task', text: 'Instalação de switches PoE com redundância.', checked: false },
+                    { type: 'task', text: 'Organização e identificação de cabos.', checked: false },
+                    { type: 'header', text: 'Energia' },
+                    { type: 'task', text: 'Instalação de pontos de energia dedicados.', checked: false },
+                    { type: 'task', text: 'Nobreaks e baterias estacionárias (para manter funcionamento em queda de energia).', checked: false },
+                    { type: 'task', text: 'Aterramento e proteção contra surtos.', checked: false },
+                    { type: 'header', text: 'Fixações' },
+                    { type: 'task', text: 'Instalação de suportes para câmeras, totens para leitores, caixas de sobrepor/embutir.', checked: false }
+                ]
+            },
+            {
+                title: "Fase 4 – Instalação dos Equipamentos",
+                tasks: [
+                    { type: 'header', text: 'Controle de acesso' },
+                    { type: 'task', text: 'Instalação dos leitores faciais / RFID / biométricos.', checked: false },
+                    { type: 'task', text: 'Ligação com fechaduras, eletroímãs, motores de portão.', checked: false },
+                    { type: 'task', text: 'Teste individual de acionamento.', checked: false },
+                    { type: 'header', text: 'CFTV' },
+                    { type: 'task', text: 'Fixação e alinhamento das câmeras.', checked: false },
+                    { type: 'task', text: 'Conexão na rede.', checked: false },
+                    { type: 'task', text: 'Teste de imagem e gravação.', checked: false },
+                    { type: 'header', text: 'Interfonia IP' },
+                    { type: 'task', text: 'Instalação dos módulos de chamada.', checked: false },
+                    { type: 'task', text: 'Integração com software de portaria remota.', checked: false },
+                    { type: 'header', text: 'Central de controle' },
+                    { type: 'task', text: 'Montagem do rack (switches, patch panels, DVR/NVR, roteadores).', checked: false },
+                    { type: 'task', text: 'Organização dos cabos e identificação.', checked: false }
+                ]
+            },
+            {
+                title: "Fase 5 – Configuração e Integração do Sistema",
+                tasks: [
+                    { type: 'header', text: 'Configuração de rede' },
+                    { type: 'task', text: 'IP fixo para cada equipamento.', checked: false },
+                    { type: 'task', text: 'VLANs e QoS para priorização de tráfego de vídeo e voz.', checked: false },
+                    { type: 'task', text: 'Configuração de redundância de internet.', checked: false },
+                    { type: 'header', text: 'Software' },
+                    { type: 'task', text: 'Cadastro de usuários (moradores, prestadores).', checked: false },
+                    { type: 'task', text: 'Programação de horários e regras de acesso.', checked: false },
+                    { type: 'task', text: 'Integração com sistema de portaria remota.', checked: false },
+                    { type: 'header', text: 'CFTV' },
+                    { type: 'task', text: 'Ajuste de ângulos e resolução.', checked: false },
+                    { type: 'task', text: 'Configuração de gravação contínua e detecção de movimento.', checked: false },
+                    { type: 'task', text: 'Criação de grupos e permissões de visualização.', checked: false },
+                    { type: 'header', text: 'Testes' },
+                    { type: 'task', text: 'Testes de abertura remota.', checked: false },
+                    { type: 'task', text: 'Simulação de falhas e verificação do backup de energia.', checked: false },
+                    { type: 'task', text: 'Ajustes finais.', checked: false }
+                ]
+            },
+            {
+                title: "Fase 6 – Treinamento e Entrega",
+                tasks: [
+                    { type: 'header', text: 'Treinamento' },
+                    { type: 'task', text: 'Síndico, zelador e equipe de segurança.', checked: false },
+                    { type: 'task', text: 'Uso do sistema, relatórios, abertura de chamados.', checked: false },
+                    { type: 'header', text: 'Documentação' },
+                    { type: 'task', text: 'Manual do sistema.', checked: false },
+                    { type: 'task', text: 'Lista de senhas e acessos administrativos.', checked: false },
+                    { type: 'task', text: 'Registro de configurações e IPs.', checked: false },
+                    { type: 'header', text: 'Entrega oficial' },
+                    { type: 'task', text: 'Assinatura de termo de entrega e aceitação.', checked: false },
+                    { type: 'task', text: 'Início do suporte pós-implantação.', checked: false }
+                ]
+            }
+        ];
+
+        async function saveStateToFirestore() {
+            if (!checklistDocRef) return;
+            try {
+                // Agora salva o objeto de projeto inteiro
+                const dataToSave = { content: JSON.stringify(projectData) };
+                await setDoc(checklistDocRef, dataToSave);
+            } catch (error) {
+                console.error("Erro ao salvar no Firestore: ", error);
+            }
+        }
+
+        function renderAll() {
+            condominiumNameElement.textContent = projectData.condominiumName;
+            renderChecklist();
+        }
+
+        function renderChecklist() {
+            container.innerHTML = '';
+            projectData.checklist.forEach((section, sectionIndex) => {
+                const sectionElement = document.createElement('div');
+                sectionElement.className = 'section-card bg-white p-6 rounded-lg shadow-md';
+                let tasksHtml = '';
+                section.tasks.forEach((task, taskIndex) => {
+                    if (task.type === 'header') {
+                        tasksHtml += `<div class="task-header">${task.text}</div>`;
+                    } else {
+                        tasksHtml += `
+                            <div class="task-item flex items-center mb-3">
+                                <input type="checkbox" id="task-${sectionIndex}-${taskIndex}" class="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0" onchange="window.toggleTask(${sectionIndex}, ${taskIndex})" ${task.checked ? 'checked' : ''}>
+                                <span class="ml-3 text-gray-700 w-full" contenteditable="true" onblur="window.updateTaskText(${sectionIndex}, ${taskIndex}, this.innerText)">${task.text}</span>
+                            </div>`;
+                    }
+                });
+                sectionElement.innerHTML = `
+                    <h2 class="text-xl font-semibold mb-4 text-gray-800">${section.title}</h2>
+                    <div id="task-list-${sectionIndex}">${tasksHtml}</div>
+                    <div class="mt-6 flex gap-3">
+                        <input type="text" id="new-task-input-${sectionIndex}" class="flex-grow block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2" placeholder="Adicionar novo passo...">
+                        <button onclick="window.addTask(${sectionIndex})" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">Adicionar</button>
+                    </div>`;
+                container.appendChild(sectionElement);
+            });
+            updateProgress();
+        }
+
+        window.addTask = function(sectionIndex) {
+            const input = document.getElementById(`new-task-input-${sectionIndex}`);
+            const taskText = input.value.trim();
+            if (taskText) {
+                projectData.checklist[sectionIndex].tasks.push({ type: 'task', text: taskText, checked: false });
+                saveStateToFirestore();
+            }
+        }
+
+        window.updateTaskText = function(sectionIndex, taskIndex, newText) {
+            if (projectData.checklist[sectionIndex].tasks[taskIndex].text !== newText) {
+                projectData.checklist[sectionIndex].tasks[taskIndex].text = newText;
+                saveStateToFirestore();
+            }
+        }
+
+        window.toggleTask = function(sectionIndex, taskIndex) {
+            projectData.checklist[sectionIndex].tasks[taskIndex].checked = !projectData.checklist[sectionIndex].tasks[taskIndex].checked;
+            saveStateToFirestore();
+        }
+
+        function updateProgress() {
+            const allTasks = projectData.checklist.flatMap(section => section.tasks.filter(t => t.type === 'task'));
+            const completedTasks = allTasks.filter(task => task.checked);
+            const totalTasks = allTasks.length;
+            const completedCount = completedTasks.length;
+            const percentage = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
+            progressBar.style.width = `${percentage}%`;
+            progressPercentage.textContent = `${percentage}%`;
+        }
+
+        function generateId(length = 8) {
+            return Math.random().toString(36).substring(2, 2 + length);
+        }
+
+        async function main() {
+            if (!firebaseConfig.apiKey) {
+                loadingOverlay.innerHTML = `<p class="text-center text-red-600 font-semibold p-4">Erro: A configuração do Firebase não foi encontrada.<br>Edite o arquivo index.html e cole sua 'firebaseConfig'.</p>`;
+                return;
+            }
+
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            try {
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Authentication failed:", error);
+                loadingOverlay.innerHTML = "<p>Falha na autenticação.</p>";
+                return;
+            }
+            
+            let checklistId = window.location.hash.substring(1);
+            if (!checklistId) {
+                checklistId = generateId();
+                window.location.hash = checklistId;
+            }
+
+            shareLinkDisplay.value = window.location.href;
+            
+            checklistDocRef = doc(db, "checklists", checklistId);
+            
+            unsubscribe = onSnapshot(checklistDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    projectData = JSON.parse(docSnap.data().content);
+                } else {
+                    console.log("Documento não encontrado, criando um novo.");
+                    projectData.checklist = JSON.parse(JSON.stringify(defaultChecklist));
+                    saveStateToFirestore();
+                }
+                renderAll();
+                loadingOverlay.style.opacity = '0';
+                setTimeout(() => loadingOverlay.style.display = 'none', 300);
+            }, (error) => {
+                console.error("Erro ao ouvir o documento do Firestore:", error);
+                loadingOverlay.innerHTML = "<p>Erro ao carregar o checklist.</p>";
+            });
+
+            condominiumNameElement.addEventListener('blur', () => {
+                const newName = condominiumNameElement.textContent.trim();
+                if (projectData.condominiumName !== newName) {
+                    projectData.condominiumName = newName;
+                    saveStateToFirestore();
+                }
+            });
+
+            resetButton.addEventListener('click', async () => {
+                if (confirm("Tem certeza que deseja apagar todo o progresso para todos os usuários? Esta ação não pode ser desfeita.")) {
+                    if (unsubscribe) unsubscribe();
+                    await deleteDoc(checklistDocRef);
+                    window.location.reload();
+                }
+            });
+
+            copyLinkButton.addEventListener('click', () => {
+                shareLinkDisplay.select();
+                document.execCommand('copy');
+                copyLinkButton.textContent = 'Copiado!';
+                setTimeout(() => { copyLinkButton.textContent = 'Copiar'; }, 2000);
+            });
+        }
+
+        main();
+    </script>
+</body>
+</html>
