@@ -23,6 +23,10 @@
             text-decoration: line-through;
             color: #9ca3af;
         }
+        /* Adicionado estilo para o cursor quando o checkbox está desabilitado */
+        .task-item input:disabled {
+            cursor: not-allowed;
+        }
         .editable-field {
             cursor: text;
             padding: 4px 8px;
@@ -389,10 +393,12 @@
                     if (task.type === 'header') {
                         tasksHtml += `<div class="task-header">${task.text}</div>`;
                     } else {
+                        // --- INÍCIO DA ALTERAÇÃO ---
+                        // Adiciona o atributo 'disabled' ao checkbox se a tarefa já estiver marcada
                         tasksHtml += `
                             <div class="task-item flex items-center justify-between mb-3 group">
                                 <div class="flex items-center flex-grow">
-                                    <input type="checkbox" id="task-${sectionIndex}-${taskIndex}" class="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0" onchange="window.toggleTask(${sectionIndex}, ${taskIndex})" ${task.checked ? 'checked' : ''}>
+                                    <input type="checkbox" id="task-${sectionIndex}-${taskIndex}" class="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0" onchange="window.toggleTask(${sectionIndex}, ${taskIndex})" ${task.checked ? 'checked disabled' : ''}>
                                     <span class="ml-3 text-gray-700 w-full" contenteditable="true" onblur="window.updateTaskText(${sectionIndex}, ${taskIndex}, this.innerText)">${task.text}</span>
                                 </div>
                                 <button onclick="window.deleteTask(${sectionIndex}, ${taskIndex})" class="delete-task-btn ml-4 text-gray-400 hover:text-red-500 flex-shrink-0">
@@ -401,6 +407,7 @@
                                     </svg>
                                 </button>
                             </div>`;
+                        // --- FIM DA ALTERAÇÃO ---
                     }
                 });
 
@@ -451,14 +458,10 @@
             }
         }
         
-        // --- INÍCIO DA CORREÇÃO ---
         window.deleteTask = function(sectionIndex, taskIndex) {
-            // Guarda os índices da tarefa a ser apagada
             taskToDelete = { sectionIndex, taskIndex };
-            // Mostra o modal de confirmação
             deleteTaskModal.style.display = 'flex';
         }
-        // --- FIM DA CORREÇÃO ---
 
         window.updateTaskText = function(sectionIndex, taskIndex, newText) {
             if (projectData.checklist[sectionIndex].tasks[taskIndex].text !== newText) {
@@ -467,10 +470,16 @@
             }
         }
 
+        // --- INÍCIO DA ALTERAÇÃO ---
         window.toggleTask = function(sectionIndex, taskIndex) {
-            projectData.checklist[sectionIndex].tasks[taskIndex].checked = !projectData.checklist[sectionIndex].tasks[taskIndex].checked;
-            saveStateToFirestore();
+            const task = projectData.checklist[sectionIndex].tasks[taskIndex];
+            // Apenas permite marcar (de false para true). Não permite desmarcar.
+            if (!task.checked) {
+                task.checked = true;
+                saveStateToFirestore(); // Isso irá disparar a re-renderização que desabilitará o checkbox.
+            }
         }
+        // --- FIM DA ALTERAÇÃO ---
 
         function updateProgress() {
             const allTasks = projectData.checklist.flatMap(section => section.tasks.filter(t => t.type === 'task'));
@@ -607,7 +616,6 @@
                 }
             });
             
-            // --- INÍCIO DA ADIÇÃO DOS EVENTOS DO NOVO MODAL ---
             // Fecha o modal de apagar tarefa
             cancelDeleteTaskButton.addEventListener('click', () => {
                 deleteTaskModal.style.display = 'none';
@@ -623,7 +631,6 @@
                 }
                 deleteTaskModal.style.display = 'none';
             });
-            // --- FIM DA ADIÇÃO DOS EVENTOS DO NOVO MODAL ---
 
             pdfButton.addEventListener('click', async () => {
                 const originalButtonText = pdfButton.innerHTML;
