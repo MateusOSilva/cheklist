@@ -534,30 +534,57 @@
                 }
             });
 
+// --- INÍCIO DAS ALTERAÇÕES ---
+
+            // Abre o modal para apagar o cronograma
             resetButton.addEventListener('click', () => {
+                passwordAction = 'delete';
+                passwordModalTitle.textContent = 'Confirmar Exclusão';
+                passwordModalText.textContent = 'Para apagar este cronograma, por favor, digite a senha de confirmação.';
+                confirmActionButton.textContent = 'Confirmar Exclusão';
+                confirmActionButton.className = 'px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium';
+                
                 passwordInput.value = '';
                 passwordError.classList.add('hidden');
                 passwordModal.style.display = 'flex';
             });
 
-            cancelResetButton.addEventListener('click', () => {
+            // Abre o modal para criar um novo cronograma
+            newChecklistButton.addEventListener('click', () => {
+                passwordAction = 'createNew';
+                passwordModalTitle.textContent = 'Criar Novo Cronograma';
+                passwordModalText.textContent = 'Para criar um novo cronograma, por favor, digite a senha.';
+                confirmActionButton.textContent = 'Confirmar Criação';
+                confirmActionButton.className = 'px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium';
+
+                passwordInput.value = '';
+                passwordError.classList.add('hidden');
+                passwordModal.style.display = 'flex';
+            });
+
+            // Fecha o modal
+            cancelActionButton.addEventListener('click', () => {
                 passwordModal.style.display = 'none';
             });
 
-            confirmResetButton.addEventListener('click', async () => {
+            // Confirma a ação (apagar ou criar novo)
+            confirmActionButton.addEventListener('click', async () => {
                 if (passwordInput.value === 'mc3') {
                     passwordModal.style.display = 'none';
-                    if (unsubscribe) unsubscribe();
-                    await deleteDoc(checklistDocRef);
-                    window.location.reload();
+
+                    if (passwordAction === 'delete') {
+                        if (unsubscribe) unsubscribe();
+                        await deleteDoc(checklistDocRef);
+                        window.location.reload();
+                    } else if (passwordAction === 'createNew') {
+                        window.location.href = window.location.origin + window.location.pathname;
+                    }
                 } else {
                     passwordError.classList.remove('hidden');
                 }
             });
-            
-            newChecklistButton.addEventListener('click', () => {
-                window.location.href = window.location.origin + window.location.pathname;
-            });
+
+            // --- FIM DAS ALTERAÇÕES ---
 
             pdfButton.addEventListener('click', async () => {
                 const originalButtonText = pdfButton.innerHTML;
